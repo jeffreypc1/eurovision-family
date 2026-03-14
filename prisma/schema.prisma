@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./eurovision.db"
+}
+
+model FamilyMember {
+  id        Int      @id @default(autoincrement())
+  name      String
+  emoji     String   @default("🎵")
+  color     String   @default("#E91E8C")
+  createdAt DateTime @default(now())
+  ratings   Rating[]
+}
+
+model Song {
+  id             Int      @id @default(autoincrement())
+  country        String
+  countryCode    String
+  artist         String
+  title          String
+  youtubeVideoId String?
+  year           Int      @default(2026)
+  createdAt      DateTime @default(now())
+  ratings        Rating[]
+}
+
+model Rating {
+  id             Int          @id @default(autoincrement())
+  stars          Int
+  comment        String?
+  familyMemberId Int
+  songId         Int
+  createdAt      DateTime     @default(now())
+  familyMember   FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+  song           Song         @relation(fields: [songId], references: [id], onDelete: Cascade)
+}
