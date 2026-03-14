@@ -12,6 +12,7 @@ const nextConfig = {
       },
     ],
   },
+  serverExternalPackages: ['@prisma/adapter-libsql'],
 };
 
 module.exports = nextConfig;

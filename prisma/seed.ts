@@ -1,6 +1,20 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaLibSQL } from '@prisma/adapter-libsql';
+import { readFileSync } from 'fs';
 
-const prisma = new PrismaClient();
+// Load .env
+const envContent = readFileSync('.env', 'utf-8');
+for (const line of envContent.split('\n')) {
+  const match = line.match(/^(\w+)=(.*)$/);
+  if (match) process.env[match[1]] = match[2].trim();
+}
+
+const adapter = new PrismaLibSQL({
+  url: process.env.TURSO_DATABASE_URL!,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const prisma = new PrismaClient({ adapter } as any);
 
 const songs = [
   { country: 'Albania', countryCode: 'AL', artist: 'Alis', title: 'Nân', youtubeVideoId: 'b9AdRrA554o' },
