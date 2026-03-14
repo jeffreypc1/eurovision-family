@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Layered "Chameleon Heart" inspired by Eurovision 2026 -->
+  <!-- Outer glow layer -->
+  <path d="M100 180 C100 180 20 120 20 75 C20 45 45 25 70 25 C85 25 95 35 100 45 C105 35 115 25 130 25 C155 25 180 45 180 75 C180 120 100 180 100 180Z"
+        fill="none" stroke="url(#glow)" stroke-width="3" opacity="0.3"/>
+  <!-- Layer 3 - blue -->
+  <path d="M100 170 C100 170 28 115 28 75 C28 49 49 32 70 32 C84 32 94 40 100 50 C106 40 116 32 130 32 C151 32 172 49 172 75 C172 115 100 170 100 170Z"
+        fill="url(#blue)" opacity="0.5"/>
+  <!-- Layer 2 - purple -->
+  <path d="M100 160 C100 160 36 110 36 75 C36 53 53 39 70 39 C83 39 93 46 100 55 C107 46 117 39 130 39 C147 39 164 53 164 75 C164 110 100 160 100 160Z"
+        fill="url(#purple)" opacity="0.6"/>
+  <!-- Layer 1 - pink (main) -->
+  <path d="M100 150 C100 150 44 105 44 75 C44 57 57 46 70 46 C82 46 92 52 100 60 C108 52 118 46 130 46 C143 46 156 57 156 75 C156 105 100 150 100 150Z"
+        fill="url(#pink)" opacity="0.9"/>
+  <!-- Inner highlight -->
+  <path d="M100 140 C100 140 52 100 52 75 C52 61 61 53 70 53 C80 53 90 58 100 66 C110 58 120 53 130 53 C139 53 148 61 148 75 C148 100 100 140 100 140Z"
+        fill="url(#highlight)" opacity="0.4"/>
+
+  <defs>
+    <linearGradient id="pink" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E91E8C"/>
+      <stop offset="100%" stop-color="#FF4DA6"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7B2FBE"/>
+      <stop offset="100%" stop-color="#9B59B6"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1B3F8B"/>
+      <stop offset="100%" stop-color="#3498DB"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#E91E8C"/>
+    </linearGradient>
+    <linearGradient id="highlight" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>

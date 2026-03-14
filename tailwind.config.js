@@ -5,6 +5,10 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        fredoka: ['var(--font-fredoka)', 'sans-serif'],
+        outfit: ['var(--font-outfit)', 'sans-serif'],
+      },
       colors: {
         eurovision: {
           pink: '#E91E8C',

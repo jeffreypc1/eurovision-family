@@ -5,6 +5,7 @@ import SongCard from '@/components/SongCard';
 import MemberSelector from '@/components/MemberSelector';
 import FilterBar from '@/components/FilterBar';
 import VideoPlayer from '@/components/VideoPlayer';
+import RatingCelebration from '@/components/RatingCelebration';
 import confetti from 'canvas-confetti';
 
 interface FamilyMember {
@@ -41,6 +42,7 @@ export default function Home() {
   const [memberFilter, setMemberFilter] = useState<number | 'all'>('all');
   const [sortBy, setSortBy] = useState<'country' | 'rating' | 'recent'>('country');
   const [watchVideo, setWatchVideo] = useState<{ videoId: string; title: string; country: string } | null>(null);
+  const [celebration, setCelebration] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchSongs = useCallback(async () => {
@@ -65,22 +67,36 @@ export default function Home() {
     fetchSongs();
   }, [fetchSongs]);
 
-  const handleRate = async (songId: number, stars: number, comment: string) => {
+  const handleRate = async (songId: number, stars: number) => {
     if (!selectedMemberId) return;
 
     await fetch('/api/ratings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ songId, familyMemberId: selectedMemberId, stars, comment }),
+      body: JSON.stringify({ songId, familyMemberId: selectedMemberId, stars }),
     });
 
-    // Confetti for 5-star ratings!
+    // Celebration for every rating!
+    setCelebration(stars);
+
+    // Extra confetti for 5-star ratings!
     if (stars === 5) {
       confetti({
-        particleCount: 100,
-        spread: 70,
+        particleCount: 150,
+        spread: 100,
         origin: { y: 0.6 },
         colors: ['#E91E8C', '#7B2FBE', '#FFD700', '#1B3F8B', '#2ECC71'],
+      });
+    }
+    // Sad confetti for 1-star ratings
+    if (stars === 1) {
+      confetti({
+        particleCount: 30,
+        spread: 40,
+        gravity: 2.5,
+        origin: { y: 0.3 },
+        colors: ['#333', '#555', '#777'],
+        shapes: ['circle'],
       });
     }
 
@@ -117,17 +133,22 @@ export default function Home() {
     <div className="space-y-6 pt-6">
       {/* Hero */}
       <div className="text-center py-8">
-        <h1 className="text-5xl font-bold neon-text mb-2">
-          Eurovision 2026
-        </h1>
-        <p className="text-white/50 text-lg">Basel, Switzerland</p>
-        <div className="flex justify-center gap-2 mt-3 text-2xl animate-float">
-          <span>🇨🇭</span>
-          <span>✨</span>
-          <span>🎤</span>
-          <span>✨</span>
-          <span>🇨🇭</span>
+        <div className="flex justify-center mb-5">
+          <img
+            src="/eurovision-2026-logo.png"
+            alt="Eurovision Song Contest 2026"
+            className="w-28 h-28 animate-float drop-shadow-[0_0_40px_rgba(233,30,140,0.4)]"
+          />
         </div>
+        <h1 className="text-5xl md:text-6xl font-fredoka font-bold neon-text mb-2">
+          O&apos;Brien Family
+        </h1>
+        <p className="text-xl font-outfit font-light bg-gradient-to-r from-eurovision-pink via-white/80 to-eurovision-purple bg-clip-text text-transparent">
+          Eurovision 2026 Ranker
+        </p>
+        <p className="text-white/40 text-sm mt-2 font-outfit tracking-widest uppercase">
+          Vienna, Austria 🇦🇹
+        </p>
       </div>
 
       {/* Member selector */}
@@ -203,6 +224,14 @@ export default function Home() {
           songTitle={watchVideo.title}
           country={watchVideo.country}
           onClose={() => setWatchVideo(null)}
+        />
+      )}
+
+      {/* Rating celebration overlay */}
+      {celebration !== null && (
+        <RatingCelebration
+          stars={celebration}
+          onComplete={() => setCelebration(null)}
         />
       )}
     </div>

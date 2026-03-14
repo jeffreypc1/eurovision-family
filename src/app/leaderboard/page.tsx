@@ -324,9 +324,6 @@ export default function LeaderboardPage() {
                       <span>{getFlagEmoji(r.song.countryCode)}</span>
                       <span className="font-medium">{r.song.country}</span>
                     </div>
-                    {r.comment && (
-                      <p className="text-white/50 text-sm mt-0.5 truncate">&ldquo;{r.comment}&rdquo;</p>
-                    )}
                   </div>
                   <div className="text-right">
                     <div className="text-eurovision-gold font-bold">{r.stars} ★</div>
