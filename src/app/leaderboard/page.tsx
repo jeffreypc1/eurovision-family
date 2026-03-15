@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getFlagEmoji } from '@/lib/flags';
+import VideoPlayer from '@/components/VideoPlayer';
 
 interface FamilyMember {
   id: number;
@@ -25,6 +26,7 @@ interface Song {
   artist: string;
   title: string;
   year: number;
+  youtubeVideoId: string | null;
   ratings: Rating[];
 }
 
@@ -38,6 +40,7 @@ export default function LeaderboardPage() {
   const [tab, setTab] = useState<'overall' | 'by-member' | 'activity' | 'cross-year'>('overall');
   const [selectedYear, setSelectedYear] = useState(2026);
   const [availableYears, setAvailableYears] = useState<number[]>([2026]);
+  const [watchVideo, setWatchVideo] = useState<{ videoId: string; title: string; country: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     const params = new URLSearchParams();
@@ -384,15 +387,12 @@ export default function LeaderboardPage() {
               <tbody>
                 {(() => {
                   // Get all countries that appear in any year
-                  const countryData: Record<string, { code: string; years: Record<number, { avg: number; count: number; artist: string; title: string }> }> = {};
+                  const countryData: Record<string, { code: string; years: Record<number, { avg: number; count: number; artist: string; title: string; videoId: string | null }> }> = {};
 
-                  // Track which countries participated in which years
-                  // participated = has a song entry (regardless of ratings)
-                  // rated = has ratings
                   allSongs.forEach((s) => {
                     if (!countryData[s.country]) countryData[s.country] = { code: s.countryCode, years: {} };
                     const avg = s.ratings.length ? s.ratings.reduce((sum, r) => sum + r.stars, 0) / s.ratings.length : 0;
-                    countryData[s.country].years[s.year] = { avg, count: s.ratings.length, artist: s.artist, title: s.title };
+                    countryData[s.country].years[s.year] = { avg, count: s.ratings.length, artist: s.artist, title: s.title, videoId: s.youtubeVideoId };
                   });
 
                   // Sort alphabetically by country for clarity
@@ -428,13 +428,17 @@ export default function LeaderboardPage() {
                           return (
                             <td key={y} className="text-center py-3 px-4">
                               {rated ? (
-                                <div>
+                                <div className={yearData.videoId ? 'cursor-pointer hover:scale-105 transition-transform' : ''}
+                                  onClick={() => yearData.videoId && setWatchVideo({ videoId: yearData.videoId, title: `${yearData.artist} - ${yearData.title}`, country: `${c.country} ${y}` })}>
                                   <span className="font-bold text-eurovision-gold">{yearData.avg.toFixed(1)} ★</span>
+                                  {yearData.videoId && <span className="text-white/15 text-[9px] ml-1">▶</span>}
                                   <div className="text-[9px] text-white/25 mt-0.5 truncate max-w-[100px]">{yearData.artist}</div>
                                 </div>
                               ) : participated ? (
-                                <div>
+                                <div className={yearData.videoId ? 'cursor-pointer hover:scale-105 transition-transform' : ''}
+                                  onClick={() => yearData.videoId && setWatchVideo({ videoId: yearData.videoId, title: `${yearData.artist} - ${yearData.title}`, country: `${c.country} ${y}` })}>
                                   <span className="text-white/20">Not rated</span>
+                                  {yearData.videoId && <span className="text-white/15 text-[9px] ml-1">▶</span>}
                                   <div className="text-[9px] text-white/15 mt-0.5 truncate max-w-[100px]">{yearData.artist}</div>
                                 </div>
                               ) : (
@@ -467,6 +471,16 @@ export default function LeaderboardPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* Video player modal */}
+      {watchVideo && (
+        <VideoPlayer
+          videoId={watchVideo.videoId}
+          songTitle={watchVideo.title}
+          country={watchVideo.country}
+          onClose={() => setWatchVideo(null)}
+        />
       )}
     </div>
   );
