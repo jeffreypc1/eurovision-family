@@ -386,25 +386,34 @@ export default function LeaderboardPage() {
                   // Get all countries that appear in any year
                   const countryData: Record<string, { code: string; years: Record<number, { avg: number; count: number; artist: string; title: string }> }> = {};
 
+                  // Track which countries participated in which years
+                  // participated = has a song entry (regardless of ratings)
+                  // rated = has ratings
                   allSongs.forEach((s) => {
                     if (!countryData[s.country]) countryData[s.country] = { code: s.countryCode, years: {} };
                     const avg = s.ratings.length ? s.ratings.reduce((sum, r) => sum + r.stars, 0) / s.ratings.length : 0;
                     countryData[s.country].years[s.year] = { avg, count: s.ratings.length, artist: s.artist, title: s.title };
                   });
 
-                  // Sort by overall average
+                  // Sort alphabetically by country for clarity
                   const sorted = Object.entries(countryData)
                     .map(([country, data]) => {
                       const yearAvgs = Object.values(data.years).filter((y) => y.count > 0).map((y) => y.avg);
                       const overallAvg = yearAvgs.length > 0 ? yearAvgs.reduce((s, v) => s + v, 0) / yearAvgs.length : 0;
                       return { country, ...data, overallAvg };
                     })
-                    .filter((c) => Object.values(c.years).some((y) => y.count > 0))
-                    .sort((a, b) => b.overallAvg - a.overallAvg);
+                    .sort((a, b) => b.overallAvg - a.overallAvg || a.country.localeCompare(b.country));
 
                   return sorted.map((c) => {
-                    const yearValues = availableYears.map((y) => c.years[y]?.avg || 0).filter((v) => v > 0);
-                    const trend = yearValues.length >= 2 ? yearValues[yearValues.length - 1] - yearValues[0] : 0;
+                    // Trend: compare most recent year with ratings to the year before it
+                    const sortedYears = availableYears.slice().sort((a, b) => a - b); // oldest first
+                    const ratedYears = sortedYears.filter((y) => c.years[y]?.count > 0);
+                    let trend = 0;
+                    if (ratedYears.length >= 2) {
+                      const latest = c.years[ratedYears[ratedYears.length - 1]].avg;
+                      const previous = c.years[ratedYears[ratedYears.length - 2]].avg;
+                      trend = latest - previous;
+                    }
 
                     return (
                       <tr key={c.country} className="border-b border-white/5 hover:bg-white/5">
@@ -414,26 +423,41 @@ export default function LeaderboardPage() {
                         </td>
                         {availableYears.map((y) => {
                           const yearData = c.years[y];
+                          const participated = !!yearData; // has an entry for this year
+                          const rated = yearData && yearData.count > 0;
                           return (
                             <td key={y} className="text-center py-3 px-4">
-                              {yearData && yearData.count > 0 ? (
+                              {rated ? (
                                 <div>
                                   <span className="font-bold text-eurovision-gold">{yearData.avg.toFixed(1)} ★</span>
                                   <div className="text-[9px] text-white/25 mt-0.5 truncate max-w-[100px]">{yearData.artist}</div>
                                 </div>
+                              ) : participated ? (
+                                <div>
+                                  <span className="text-white/20">Not rated</span>
+                                  <div className="text-[9px] text-white/15 mt-0.5 truncate max-w-[100px]">{yearData.artist}</div>
+                                </div>
                               ) : (
-                                <span className="text-white/15">—</span>
+                                <span className="text-white/10 text-xs italic">NP</span>
                               )}
                             </td>
                           );
                         })}
                         <td className="text-center py-3 px-4">
-                          <span className="font-bold text-white/60">{c.overallAvg.toFixed(1)}</span>
+                          {c.overallAvg > 0 ? (
+                            <span className="font-bold text-white/60">{c.overallAvg.toFixed(1)}</span>
+                          ) : (
+                            <span className="text-white/15">—</span>
+                          )}
                         </td>
                         <td className="text-center py-3 px-4">
-                          {trend > 0.3 ? <span className="text-green-400">↑</span> :
-                           trend < -0.3 ? <span className="text-red-400">↓</span> :
-                           yearValues.length >= 2 ? <span className="text-white/20">→</span> : <span className="text-white/10">—</span>}
+                          {ratedYears.length >= 2 ? (
+                            trend > 0.3 ? <span className="text-green-400 font-bold">↑ +{trend.toFixed(1)}</span> :
+                            trend < -0.3 ? <span className="text-red-400 font-bold">↓ {trend.toFixed(1)}</span> :
+                            <span className="text-white/20">→</span>
+                          ) : (
+                            <span className="text-white/10">—</span>
+                          )}
                         </td>
                       </tr>
                     );
