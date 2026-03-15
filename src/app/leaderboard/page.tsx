@@ -40,7 +40,7 @@ export default function LeaderboardPage() {
   const [tab, setTab] = useState<'overall' | 'by-member' | 'activity' | 'cross-year'>('overall');
   const [selectedYear, setSelectedYear] = useState(2026);
   const [availableYears, setAvailableYears] = useState<number[]>([2026]);
-  const [watchVideo, setWatchVideo] = useState<{ videoId: string; title: string; country: string } | null>(null);
+  const [watchVideo, setWatchVideo] = useState<{ videoId: string; title: string; country: string; songId: number; currentRating: number } | null>(null);
 
   const fetchData = useCallback(async () => {
     const params = new URLSearchParams();
@@ -387,12 +387,12 @@ export default function LeaderboardPage() {
               <tbody>
                 {(() => {
                   // Get all countries that appear in any year
-                  const countryData: Record<string, { code: string; years: Record<number, { avg: number; count: number; artist: string; title: string; videoId: string | null }> }> = {};
+                  const countryData: Record<string, { code: string; years: Record<number, { avg: number; count: number; artist: string; title: string; videoId: string | null; songId: number }> }> = {};
 
                   allSongs.forEach((s) => {
                     if (!countryData[s.country]) countryData[s.country] = { code: s.countryCode, years: {} };
                     const avg = s.ratings.length ? s.ratings.reduce((sum, r) => sum + r.stars, 0) / s.ratings.length : 0;
-                    countryData[s.country].years[s.year] = { avg, count: s.ratings.length, artist: s.artist, title: s.title, videoId: s.youtubeVideoId };
+                    countryData[s.country].years[s.year] = { avg, count: s.ratings.length, artist: s.artist, title: s.title, videoId: s.youtubeVideoId, songId: s.id };
                   });
 
                   // Sort alphabetically by country for clarity
@@ -429,14 +429,14 @@ export default function LeaderboardPage() {
                             <td key={y} className="text-center py-3 px-4">
                               {rated ? (
                                 <div className={yearData.videoId ? 'cursor-pointer hover:scale-105 transition-transform' : ''}
-                                  onClick={() => yearData.videoId && setWatchVideo({ videoId: yearData.videoId, title: `${yearData.artist} - ${yearData.title}`, country: `${c.country} ${y}` })}>
+                                  onClick={() => yearData.videoId && setWatchVideo({ videoId: yearData.videoId, title: `${yearData.artist} - ${yearData.title}`, country: `${c.country} ${y}`, songId: yearData.songId, currentRating: yearData.avg })}>
                                   <span className="font-bold text-eurovision-gold">{yearData.avg.toFixed(1)} ★</span>
                                   {yearData.videoId && <span className="text-white/15 text-[9px] ml-1">▶</span>}
                                   <div className="text-[9px] text-white/25 mt-0.5 truncate max-w-[100px]">{yearData.artist}</div>
                                 </div>
                               ) : participated ? (
                                 <div className={yearData.videoId ? 'cursor-pointer hover:scale-105 transition-transform' : ''}
-                                  onClick={() => yearData.videoId && setWatchVideo({ videoId: yearData.videoId, title: `${yearData.artist} - ${yearData.title}`, country: `${c.country} ${y}` })}>
+                                  onClick={() => yearData.videoId && setWatchVideo({ videoId: yearData.videoId, title: `${yearData.artist} - ${yearData.title}`, country: `${c.country} ${y}`, songId: yearData.songId, currentRating: 0 })}>
                                   <span className="text-white/20">Not rated</span>
                                   {yearData.videoId && <span className="text-white/15 text-[9px] ml-1">▶</span>}
                                   <div className="text-[9px] text-white/15 mt-0.5 truncate max-w-[100px]">{yearData.artist}</div>
@@ -473,13 +473,32 @@ export default function LeaderboardPage() {
         </div>
       )}
 
-      {/* Video player modal */}
+      {/* Video player modal with rating */}
       {watchVideo && (
         <VideoPlayer
           videoId={watchVideo.videoId}
           songTitle={watchVideo.title}
           country={watchVideo.country}
-          onClose={() => setWatchVideo(null)}
+          onClose={() => { setWatchVideo(null); fetchData(); }}
+          currentRating={watchVideo.currentRating}
+          onRate={async (stars) => {
+            if (memberFilter === 'all') {
+              // Need a selected member to rate — use first member as fallback
+              const firstMember = members[0];
+              if (!firstMember) return;
+              await fetch('/api/ratings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ songId: watchVideo.songId, familyMemberId: firstMember.id, stars }),
+              });
+            } else {
+              await fetch('/api/ratings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ songId: watchVideo.songId, familyMemberId: Number(memberFilter), stars }),
+              });
+            }
+          }}
         />
       )}
     </div>
