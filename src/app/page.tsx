@@ -44,9 +44,13 @@ export default function Home() {
   const [watchVideo, setWatchVideo] = useState<{ videoId: string; title: string; country: string } | null>(null);
   const [celebration, setCelebration] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedYear, setSelectedYear] = useState(2026);
+  const [availableYears, setAvailableYears] = useState<number[]>([2026]);
 
   const fetchSongs = useCallback(async () => {
+    setLoading(true);
     const params = new URLSearchParams();
+    params.set('year', String(selectedYear));
     if (dateFrom) params.set('dateFrom', dateFrom);
     if (dateTo) params.set('dateTo', dateTo);
     if (memberFilter !== 'all') params.set('memberId', String(memberFilter));
@@ -54,7 +58,15 @@ export default function Home() {
     const data = await res.json();
     setSongs(data);
     setLoading(false);
-  }, [dateFrom, dateTo, memberFilter]);
+  }, [dateFrom, dateTo, memberFilter, selectedYear]);
+
+  // Fetch available years
+  useEffect(() => {
+    fetch('/api/songs').then((r) => r.json()).then((allSongs: Array<{ year: number }>) => {
+      const years = Array.from(new Set(allSongs.map((s: { year: number }) => s.year))).sort((a, b) => b - a);
+      if (years.length > 0) setAvailableYears(years);
+    });
+  }, []);
 
   const fetchMembers = async () => {
     const res = await fetch('/api/members');
@@ -144,11 +156,27 @@ export default function Home() {
           O&apos;Brien Family
         </h1>
         <p className="text-xl font-outfit font-light bg-gradient-to-r from-eurovision-pink via-white/80 to-eurovision-purple bg-clip-text text-transparent">
-          Eurovision 2026 Ranker
+          Eurovision {selectedYear} Ranker
         </p>
         <p className="text-white/40 text-sm mt-2 font-outfit tracking-widest uppercase">
-          Vienna, Austria 🇦🇹
+          {selectedYear === 2026 ? 'Vienna, Austria 🇦🇹' : selectedYear === 2025 ? 'Basel, Switzerland 🇨🇭' : selectedYear === 2024 ? 'Malmö, Sweden 🇸🇪' : ''}
         </p>
+
+        {/* Year selector */}
+        {availableYears.length > 1 && (
+          <div className="flex justify-center gap-2 mt-4">
+            {availableYears.map((year) => (
+              <button key={year} onClick={() => setSelectedYear(year)}
+                className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${
+                  selectedYear === year
+                    ? 'bg-gradient-to-r from-eurovision-pink to-eurovision-purple text-white scale-105 shadow-lg shadow-eurovision-pink/20'
+                    : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/10'
+                }`}>
+                {year}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Member selector */}

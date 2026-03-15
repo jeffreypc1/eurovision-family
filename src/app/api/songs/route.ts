@@ -23,7 +23,12 @@ export async function GET(request: NextRequest) {
     ratingWhere.familyMemberId = Number(memberId);
   }
 
+  const year = searchParams.get('year');
+  const songWhere: Record<string, unknown> = {};
+  if (year) songWhere.year = Number(year);
+
   const songs = await prisma.song.findMany({
+    where: songWhere,
     include: {
       ratings: {
         where: Object.keys(ratingWhere).length > 0 ? ratingWhere : undefined,

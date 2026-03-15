@@ -24,30 +24,40 @@ interface Song {
   countryCode: string;
   artist: string;
   title: string;
+  year: number;
   ratings: Rating[];
 }
 
 export default function LeaderboardPage() {
   const [songs, setSongs] = useState<Song[]>([]);
+  const [allSongs, setAllSongs] = useState<Song[]>([]);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [memberFilter, setMemberFilter] = useState<number | 'all'>('all');
-  const [tab, setTab] = useState<'overall' | 'by-member' | 'activity'>('overall');
+  const [tab, setTab] = useState<'overall' | 'by-member' | 'activity' | 'cross-year'>('overall');
+  const [selectedYear, setSelectedYear] = useState(2026);
+  const [availableYears, setAvailableYears] = useState<number[]>([2026]);
 
   const fetchData = useCallback(async () => {
     const params = new URLSearchParams();
+    params.set('year', String(selectedYear));
     if (dateFrom) params.set('dateFrom', dateFrom);
     if (dateTo) params.set('dateTo', dateTo);
     if (memberFilter !== 'all') params.set('memberId', String(memberFilter));
 
-    const [songsRes, membersRes] = await Promise.all([
+    const [songsRes, membersRes, allRes] = await Promise.all([
       fetch(`/api/songs?${params}`),
       fetch('/api/members'),
+      fetch('/api/songs'),
     ]);
     setSongs(await songsRes.json());
     setMembers(await membersRes.json());
-  }, [dateFrom, dateTo, memberFilter]);
+    const all = await allRes.json();
+    setAllSongs(all);
+    const years = Array.from(new Set(all.map((s: Song) => s.year))).sort((a, b) => (b as number) - (a as number)) as number[];
+    setAvailableYears(years);
+  }, [dateFrom, dateTo, memberFilter, selectedYear]);
 
   useEffect(() => {
     fetchData();
@@ -122,12 +132,27 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
+      {/* Year selector */}
+      {availableYears.length > 1 && (
+        <div className="flex gap-2 mb-4">
+          {availableYears.map((year) => (
+            <button key={year} onClick={() => setSelectedYear(year)}
+              className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                selectedYear === year
+                  ? 'bg-gradient-to-r from-eurovision-pink to-eurovision-purple text-white'
+                  : 'bg-white/5 text-white/40 hover:text-white'
+              }`}>{year}</button>
+          ))}
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1 bg-white/5 rounded-xl p-1">
         {[
           { key: 'overall' as const, label: 'Overall Rankings', icon: '📊' },
           { key: 'by-member' as const, label: 'By Family Member', icon: '👨‍👩‍👧‍👦' },
           { key: 'activity' as const, label: 'Recent Activity', icon: '📝' },
+          ...(availableYears.length > 1 ? [{ key: 'cross-year' as const, label: 'Cross-Year', icon: '📈' }] : []),
         ].map((t) => (
           <button
             key={t.key}
@@ -334,6 +359,88 @@ export default function LeaderboardPage() {
                 </div>
               ))
             )}
+          </div>
+        </div>
+      )}
+      {/* Cross-Year Comparison */}
+      {tab === 'cross-year' && (
+        <div className="glass-card overflow-hidden">
+          <div className="p-6 border-b border-white/10">
+            <h3 className="text-lg font-bold">📈 Country Ratings Across Years</h3>
+            <p className="text-white/40 text-xs mt-1">See how countries performed in your family&apos;s ratings over time</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-white/40 border-b border-white/10">
+                  <th className="text-left py-3 px-4 font-medium">Country</th>
+                  {availableYears.map((y) => (
+                    <th key={y} className="text-center py-3 px-4 font-medium">{y}</th>
+                  ))}
+                  <th className="text-center py-3 px-4 font-medium">Avg</th>
+                  <th className="text-center py-3 px-4 font-medium">Trend</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  // Get all countries that appear in any year
+                  const countryData: Record<string, { code: string; years: Record<number, { avg: number; count: number; artist: string; title: string }> }> = {};
+
+                  allSongs.forEach((s) => {
+                    if (!countryData[s.country]) countryData[s.country] = { code: s.countryCode, years: {} };
+                    const avg = s.ratings.length ? s.ratings.reduce((sum, r) => sum + r.stars, 0) / s.ratings.length : 0;
+                    countryData[s.country].years[s.year] = { avg, count: s.ratings.length, artist: s.artist, title: s.title };
+                  });
+
+                  // Sort by overall average
+                  const sorted = Object.entries(countryData)
+                    .map(([country, data]) => {
+                      const yearAvgs = Object.values(data.years).filter((y) => y.count > 0).map((y) => y.avg);
+                      const overallAvg = yearAvgs.length > 0 ? yearAvgs.reduce((s, v) => s + v, 0) / yearAvgs.length : 0;
+                      return { country, ...data, overallAvg };
+                    })
+                    .filter((c) => Object.values(c.years).some((y) => y.count > 0))
+                    .sort((a, b) => b.overallAvg - a.overallAvg);
+
+                  return sorted.map((c) => {
+                    const yearValues = availableYears.map((y) => c.years[y]?.avg || 0).filter((v) => v > 0);
+                    const trend = yearValues.length >= 2 ? yearValues[yearValues.length - 1] - yearValues[0] : 0;
+
+                    return (
+                      <tr key={c.country} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="py-3 px-4">
+                          <span className="mr-2">{getFlagEmoji(c.code)}</span>
+                          <span className="font-medium">{c.country}</span>
+                        </td>
+                        {availableYears.map((y) => {
+                          const yearData = c.years[y];
+                          return (
+                            <td key={y} className="text-center py-3 px-4">
+                              {yearData && yearData.count > 0 ? (
+                                <div>
+                                  <span className="font-bold text-eurovision-gold">{yearData.avg.toFixed(1)} ★</span>
+                                  <div className="text-[9px] text-white/25 mt-0.5 truncate max-w-[100px]">{yearData.artist}</div>
+                                </div>
+                              ) : (
+                                <span className="text-white/15">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="text-center py-3 px-4">
+                          <span className="font-bold text-white/60">{c.overallAvg.toFixed(1)}</span>
+                        </td>
+                        <td className="text-center py-3 px-4">
+                          {trend > 0.3 ? <span className="text-green-400">↑</span> :
+                           trend < -0.3 ? <span className="text-red-400">↓</span> :
+                           yearValues.length >= 2 ? <span className="text-white/20">→</span> : <span className="text-white/10">—</span>}
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
